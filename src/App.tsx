@@ -3,13 +3,30 @@ import './App.css';
 
 type Language = 'JavaScript' | 'TypeScript' | 'Python';
 
-const demoCases = {
+const demoCases: Record<
+  Language,
+  {
+    code: string;
+    problem: string;
+  }
+> = {
   JavaScript: {
-    code: `function getUser(id) {
-  const user = users.find(user => user.id = id);
+    code: `const users = [
+  { id: 1, name: 'Alice' },
+  { id: 2, name: 'Bob' }
+];
+
+function getUser(id) {
+  const user = users.find(user => user.id === id);
+
+  if (!user) {
+    return undefined;
+  }
+
   return user.name;
 }`,
-    problem: 'The function crashes when I try to find a user.',
+    problem:
+      'The function crashes when I try to find a user that does not exist.',
   },
 
   TypeScript: {
@@ -22,7 +39,8 @@ const user: User = {
   name: "Ahmad",
   age: "16"
 };`,
-    problem: 'TypeScript says there is a type error in my user object.',
+    problem:
+      'TypeScript says there is a type error in my user object.',
   },
 
   Python: {
@@ -30,14 +48,18 @@ const user: User = {
     total = sum(numbers)
     return total / len(numbers)
 
-print(calculate_average([]))`,
+scores = []
+average = calculate_average(scores)
+print(average)`,
     problem:
       'My program crashes when I calculate the average of an empty list.',
   },
 };
 
 function App() {
-  const [language, setLanguage] = useState<Language>('JavaScript');
+  const [language, setLanguage] =
+    useState<Language>('JavaScript');
+
   const [code, setCode] = useState('');
   const [problem, setProblem] = useState('');
 
@@ -61,8 +83,17 @@ function App() {
     setCopied(false);
   };
 
+  const resetAnalysis = () => {
+    setAnalyzed(false);
+    setAiAnalysis('');
+    setError('');
+    setCopied(false);
+  };
+
   const analyzeCode = async () => {
-    if (!code.trim() || !problem.trim()) return;
+    if (!code.trim() || !problem.trim()) {
+      return;
+    }
 
     setAnalyzing(true);
     setAnalyzed(false);
@@ -85,7 +116,10 @@ function App() {
 
       const rawResponse = await response.text();
 
-      let data;
+      let data: {
+        analysis?: string;
+        error?: string;
+      };
 
       try {
         data = JSON.parse(rawResponse);
@@ -96,19 +130,29 @@ function App() {
       }
 
       if (!response.ok) {
-        throw new Error(data.error || 'Analysis failed.');
+        throw new Error(
+          data.error || 'Analysis failed.'
+        );
       }
 
       if (!data.analysis) {
-        throw new Error('Gemini returned an empty analysis.');
+        throw new Error(
+          'Gemini returned an empty analysis.'
+        );
       }
 
-      console.log('REAL GEMINI ANALYSIS:', data.analysis);
+      console.log(
+        'REAL GEMINI ANALYSIS:',
+        data.analysis
+      );
 
       setAiAnalysis(data.analysis);
       setAnalyzed(true);
     } catch (err) {
-      console.error('DevAgent analysis failed:', err);
+      console.error(
+        'DevAgent analysis failed:',
+        err
+      );
 
       setError(
         err instanceof Error
@@ -121,23 +165,33 @@ function App() {
   };
 
   const copyAnalysis = async () => {
-    if (!aiAnalysis) return;
+    if (!aiAnalysis) {
+      return;
+    }
 
     try {
-      if (navigator.clipboard && window.isSecureContext) {
-        await navigator.clipboard.writeText(aiAnalysis);
+      if (
+        navigator.clipboard &&
+        window.isSecureContext
+      ) {
+        await navigator.clipboard.writeText(
+          aiAnalysis
+        );
       } else {
-        const textArea = document.createElement('textarea');
+        const textArea =
+          document.createElement('textarea');
 
         textArea.value = aiAnalysis;
         textArea.style.position = 'fixed';
         textArea.style.left = '-9999px';
 
         document.body.appendChild(textArea);
+
         textArea.focus();
         textArea.select();
 
         document.execCommand('copy');
+
         document.body.removeChild(textArea);
       }
 
@@ -148,44 +202,53 @@ function App() {
       }, 2000);
     } catch (err) {
       console.error('Copy failed:', err);
-      setError('Unable to copy the analysis. Please select and copy it manually.');
-    }
-  };
 
-  const resetAnalysis = () => {
-    setAnalyzed(false);
-    setAiAnalysis('');
-    setError('');
-    setCopied(false);
+      setError(
+        'Unable to copy the analysis. Please select and copy it manually.'
+      );
+    }
   };
 
   return (
     <div className="app">
 
       {/* NAVBAR */}
+
       <nav className="navbar">
         <div className="brand">
+
           <div className="brand-icon">
             <span>⌁</span>
           </div>
 
-          <div>
+          <div className="brand-text">
             <strong>DevAgent</strong>
-            <small>AI DEBUGGING SYSTEM</small>
+
+            <small>
+              AI DEBUGGING SYSTEM
+            </small>
           </div>
+
         </div>
 
         <div className="nav-links">
-          <a href="#analyze">Analyze</a>
-          <a href="#how-it-works">How it works</a>
+          <a href="#analyze">
+            Analyze
+          </a>
+
+          <a href="#how-it-works">
+            How it works
+          </a>
         </div>
 
         <button
           className="nav-button"
           onClick={() =>
-            document.getElementById('analyze')?.scrollIntoView({
-              behavior: 'smooth',
-            })
+            document
+              .getElementById('analyze')
+              ?.scrollIntoView({
+                behavior: 'smooth',
+              })
           }
         >
           Launch Agent
@@ -195,29 +258,40 @@ function App() {
       <main>
 
         {/* HERO */}
+
         <section className="hero">
 
           <div className="hero-grid-bg" />
 
           <div className="hero-badge">
             <span className="pulse" />
+
             DEVAGENT ONLINE // AI SOFTWARE SECURITY
           </div>
 
           <div className="terminal-label">
-            <span>&gt; SYSTEM STATUS:</span>
-            <strong> OPERATIONAL</strong>
+            <span>
+              &gt; SYSTEM STATUS:
+            </span>
+
+            <strong>
+              OPERATIONAL
+            </strong>
           </div>
 
           <h1>
             Debug smarter.
             <br />
-            <span>Think like the machine.</span>
+
+            <span>
+              Think like the machine.
+            </span>
           </h1>
 
           <p>
-            DevAgent investigates your code, identifies root causes,
-            proposes fixes, generates tests, and explains the problem
+            DevAgent investigates your code,
+            identifies root causes, proposes fixes,
+            generates tests, and explains the problem
             in beginner-friendly language.
           </p>
 
@@ -226,12 +300,18 @@ function App() {
             <button
               className="primary-button"
               onClick={() =>
-                document.getElementById('analyze')?.scrollIntoView({
-                  behavior: 'smooth',
-                })
+                document
+                  .getElementById('analyze')
+                  ?.scrollIntoView({
+                    behavior: 'smooth',
+                  })
               }
             >
-              Start Analysis <span>→</span>
+              Start Analysis
+
+              <span>
+                →
+              </span>
             </button>
 
             <button
@@ -252,13 +332,17 @@ function App() {
 
         </section>
 
-
         {/* WORKSPACE */}
-        <section className="workspace" id="analyze">
+
+        <section
+          className="workspace"
+          id="analyze"
+        >
 
           <div className="section-heading">
 
             <div>
+
               <div className="eyebrow">
                 // AGENT WORKSPACE
               </div>
@@ -266,23 +350,26 @@ function App() {
               <h2>
                 Give DevAgent a problem.
               </h2>
+
             </div>
 
             <p>
-              Paste your code and describe what's going wrong.
+              Paste your code and describe
+              what's going wrong.
             </p>
 
           </div>
 
-
           <div className="workspace-grid">
 
             {/* CODE INPUT */}
+
             <div className="panel code-panel">
 
               <div className="panel-header">
 
                 <div>
+
                   <span className="panel-label">
                     SOURCE_INPUT
                   </span>
@@ -290,26 +377,40 @@ function App() {
                   <span className="panel-subtitle">
                     Developer code
                   </span>
+
                 </div>
 
                 <select
                   value={language}
                   onChange={(e) => {
-                    setLanguage(e.target.value as Language);
+                    setLanguage(
+                      e.target.value as Language
+                    );
+
                     resetAnalysis();
                   }}
                 >
-                  <option>JavaScript</option>
-                  <option>TypeScript</option>
-                  <option>Python</option>
+                  <option value="JavaScript">
+                    JavaScript
+                  </option>
+
+                  <option value="TypeScript">
+                    TypeScript
+                  </option>
+
+                  <option value="Python">
+                    Python
+                  </option>
                 </select>
 
               </div>
 
-
               <div className="editor-toolbar">
-                <span>
-                  ● ● ●
+
+                <span className="editor-dots">
+                  <i />
+                  <i />
+                  <i />
                 </span>
 
                 <span>
@@ -319,23 +420,33 @@ function App() {
                 <span>
                   READ / WRITE
                 </span>
-              </div>
 
+              </div>
 
               <div className="code-wrapper">
 
                 <div className="line-numbers">
+
                   {code
-                    ? code.split('\n').map((_, index) => (
+                    ? code
+                        .split('\n')
+                        .map((_, index) => (
+                          <span key={index}>
+                            {String(
+                              index + 1
+                            ).padStart(2, '0')}
+                          </span>
+                        ))
+                    : Array.from({
+                        length: 8,
+                      }).map((_, index) => (
                         <span key={index}>
-                          {String(index + 1).padStart(2, '0')}
-                        </span>
-                      ))
-                    : Array.from({ length: 8 }).map((_, index) => (
-                        <span key={index}>
-                          {String(index + 1).padStart(2, '0')}
+                          {String(
+                            index + 1
+                          ).padStart(2, '0')}
                         </span>
                       ))}
+
                 </div>
 
                 <textarea
@@ -350,7 +461,6 @@ function App() {
                 />
 
               </div>
-
 
               <div className="problem-area">
 
@@ -368,7 +478,6 @@ function App() {
                 />
 
               </div>
-
 
               <div className="button-row">
 
@@ -397,13 +506,14 @@ function App() {
 
             </div>
 
-
             {/* ANALYSIS */}
+
             <div className="panel analysis-panel">
 
               <div className="panel-header">
 
                 <div>
+
                   <span className="panel-label">
                     AGENT_ANALYSIS
                   </span>
@@ -415,6 +525,7 @@ function App() {
                         ? 'Investigation complete'
                         : 'Awaiting input'}
                   </span>
+
                 </div>
 
                 <div className="status-dot">
@@ -424,15 +535,15 @@ function App() {
                   {analyzing
                     ? 'SCANNING'
                     : analyzed
-                      ? 'SECURE'
+                      ? 'COMPLETE'
                       : 'READY'}
 
                 </div>
 
               </div>
 
-
               {/* EMPTY STATE */}
+
               {!analyzing &&
                 !analyzed &&
                 !error && (
@@ -452,28 +563,41 @@ function App() {
                     </h3>
 
                     <p>
-                      Provide source code and a problem.
-                      DevAgent will investigate the issue and
-                      explain the solution step by step.
+                      Provide source code and a
+                      problem. DevAgent will investigate
+                      the issue and explain the solution
+                      step by step.
                     </p>
 
                     <div className="empty-command">
-                      <span>&gt;</span> agent.await_input()
-                      <span className="cursor">_</span>
+                      <span>&gt;</span>{' '}
+                      agent.await_input()
+
+                      <span className="cursor">
+                        _
+                      </span>
                     </div>
 
                   </div>
+
                 )}
 
-
               {/* LOADING */}
+
               {analyzing && (
 
                 <div className="agent-progress">
 
                   <div className="scan-header">
-                    <span>LIVE ANALYSIS</span>
-                    <span className="blink">●</span>
+
+                    <span>
+                      LIVE ANALYSIS
+                    </span>
+
+                    <span className="blink">
+                      ●
+                    </span>
+
                   </div>
 
                   <AgentStep
@@ -502,10 +626,11 @@ function App() {
                   />
 
                 </div>
+
               )}
 
-
               {/* ERROR */}
+
               {!analyzing && error && (
 
                 <div className="analysis-results">
@@ -513,24 +638,33 @@ function App() {
                   <div className="security-alert">
 
                     <div className="alert-header">
-                      <span>⚠</span>
+
+                      <span>
+                        ⚠
+                      </span>
+
                       ANALYSIS_FAILURE
+
                     </div>
 
-                    <p>{error}</p>
+                    <p>
+                      {error}
+                    </p>
 
                     <div className="alert-help">
                       Check your Gemini API configuration,
-                      environment variables, and deployment logs.
+                      environment variables, and
+                      deployment logs.
                     </div>
 
                   </div>
 
                 </div>
+
               )}
 
-
               {/* GEMINI RESULT */}
+
               {analyzed &&
                 !analyzing &&
                 aiAnalysis && (
@@ -539,10 +673,12 @@ function App() {
 
                     <div className="analysis-terminal-header">
 
-                      <div>
-                        <span className="terminal-dot green" />
-                        <span className="terminal-dot yellow" />
+                      <div className="terminal-window-dots">
+
                         <span className="terminal-dot red" />
+                        <span className="terminal-dot yellow" />
+                        <span className="terminal-dot green" />
+
                       </div>
 
                       <span>
@@ -551,20 +687,24 @@ function App() {
 
                       <button
                         className={`copy-button ${
-                          copied ? 'copied' : ''
+                          copied
+                            ? 'copied'
+                            : ''
                         }`}
                         onClick={copyAnalysis}
                       >
-                        {copied ? '✓ COPIED' : 'COPY REPORT'}
+                        {copied
+                          ? '✓ COPIED'
+                          : 'COPY REPORT'}
                       </button>
 
                     </div>
 
-
                     <div className="analysis-meta">
 
                       <span>
-                        TARGET: {language.toUpperCase()}
+                        TARGET:{' '}
+                        {language.toUpperCase()}
                       </span>
 
                       <span>
@@ -577,13 +717,11 @@ function App() {
 
                     </div>
 
-
                     <div className="ai-response">
-
-                      {formatAnalysis(aiAnalysis)}
-
+                      {formatAnalysis(
+                        aiAnalysis
+                      )}
                     </div>
-
 
                     <div className="analysis-footer">
 
@@ -598,6 +736,7 @@ function App() {
                     </div>
 
                   </div>
+
                 )}
 
             </div>
@@ -606,8 +745,8 @@ function App() {
 
         </section>
 
-
         {/* HOW IT WORKS */}
+
         <section
           className="how-section"
           id="how-it-works"
@@ -647,7 +786,6 @@ function App() {
 
       </main>
 
-
       <footer>
 
         <div className="brand">
@@ -656,9 +794,16 @@ function App() {
             <span>⌁</span>
           </div>
 
-          <div>
-            <strong>DevAgent</strong>
-            <small>AI DEBUGGING SYSTEM</small>
+          <div className="brand-text">
+
+            <strong>
+              DevAgent
+            </strong>
+
+            <small>
+              AI DEBUGGING SYSTEM
+            </small>
+
           </div>
 
         </div>
@@ -678,9 +823,9 @@ function App() {
 }
 
 
-/* -------------------------------- */
-/* AGENT STEP                       */
-/* -------------------------------- */
+/* =========================================
+   AGENT STEP
+   ========================================= */
 
 function AgentStep({
   text,
@@ -700,7 +845,9 @@ function AgentStep({
         {active ? '✓' : '○'}
       </div>
 
-      <span>{text}</span>
+      <span>
+        {text}
+      </span>
 
       {active && (
         <span className="step-status">
@@ -713,9 +860,9 @@ function AgentStep({
 }
 
 
-/* -------------------------------- */
-/* HOW IT WORKS CARD                */
-/* -------------------------------- */
+/* =========================================
+   HOW IT WORKS CARD
+   ========================================= */
 
 function Step({
   number,
@@ -733,9 +880,13 @@ function Step({
         [{number}]
       </span>
 
-      <h3>{title}</h3>
+      <h3>
+        {title}
+      </h3>
 
-      <p>{text}</p>
+      <p>
+        {text}
+      </p>
 
       <div className="step-command">
         &gt; execute()
@@ -746,9 +897,9 @@ function Step({
 }
 
 
-/* -------------------------------- */
-/* GEMINI RESPONSE FORMATTER        */
-/* -------------------------------- */
+/* =========================================
+   GEMINI RESPONSE FORMATTER
+   ========================================= */
 
 function formatAnalysis(text: string) {
   const lines = text.split('\n');
@@ -757,6 +908,7 @@ function formatAnalysis(text: string) {
 
   let codeBuffer: string[] = [];
   let insideCode = false;
+  let codeLanguage = '';
 
   let key = 0;
 
@@ -764,18 +916,59 @@ function formatAnalysis(text: string) {
     const trimmed = line.trim();
 
     /* CODE BLOCK */
+
     if (trimmed.startsWith('```')) {
+
       if (insideCode) {
+
         elements.push(
-          <pre className="ai-code" key={key++}>
-            <code>{codeBuffer.join('\n')}</code>
-          </pre>
+          <div
+            className="terminal-code-block"
+            key={key++}
+          >
+
+            <div className="code-block-header">
+
+              <span className="terminal-window-dots">
+
+                <span className="terminal-dot red" />
+                <span className="terminal-dot yellow" />
+                <span className="terminal-dot green" />
+
+              </span>
+
+              <span className="code-language">
+                {codeLanguage || 'CODE'}
+              </span>
+
+              <span className="code-status">
+                CODE_BLOCK
+              </span>
+
+            </div>
+
+            <pre>
+              <code>
+                {codeBuffer.join('\n')}
+              </code>
+            </pre>
+
+          </div>
         );
 
         codeBuffer = [];
+        codeLanguage = '';
         insideCode = false;
+
       } else {
+
         insideCode = true;
+
+        codeLanguage = trimmed
+          .replace(/^```/, '')
+          .trim()
+          .toUpperCase();
+
       }
 
       continue;
@@ -787,7 +980,9 @@ function formatAnalysis(text: string) {
     }
 
     /* EMPTY LINE */
+
     if (!trimmed) {
+
       elements.push(
         <div
           className="ai-spacer"
@@ -799,47 +994,62 @@ function formatAnalysis(text: string) {
     }
 
     /* HEADINGS */
-    const headingMatch = trimmed.match(
-      /^(?:#{1,6}\s*|\d+\.\s+)(.+)$/
-    );
+
+    const headingMatch =
+      trimmed.match(
+        /^(?:#{1,6}\s*|\d+\.\s+)(.+)$/
+      );
 
     if (
       headingMatch &&
       !trimmed.startsWith('- ') &&
       !trimmed.startsWith('* ')
     ) {
+
+      const title =
+        headingMatch[1]
+          .replace(/\*\*/g, '')
+          .replace(/`/g, '');
+
       elements.push(
         <div
           className="ai-section"
           key={key++}
         >
+
           <div className="ai-section-title">
+
             <span className="section-marker">
               //
             </span>
 
             <h3>
-              {headingMatch[1]
-                .replace(/\*\*/g, '')
-                .replace(/`/g, '')}
+              {title}
             </h3>
+
+            <span className="section-line" />
+
           </div>
+
         </div>
       );
 
       continue;
     }
 
-    /* BULLET */
+    /* BULLETS */
+
     if (
       trimmed.startsWith('- ') ||
       trimmed.startsWith('* ')
     ) {
+
       elements.push(
         <div
           className="ai-bullet"
           key={key++}
         >
+
           <span className="bullet-marker">
             &gt;
           </span>
@@ -849,6 +1059,7 @@ function formatAnalysis(text: string) {
               trimmed.substring(2)
             )}
           </span>
+
         </div>
       );
 
@@ -856,6 +1067,7 @@ function formatAnalysis(text: string) {
     }
 
     /* NORMAL TEXT */
+
     elements.push(
       <p
         className="ai-paragraph"
@@ -870,15 +1082,24 @@ function formatAnalysis(text: string) {
 }
 
 
-/* -------------------------------- */
-/* SIMPLE MARKDOWN CLEANER           */
-/* -------------------------------- */
+/* =========================================
+   SIMPLE MARKDOWN CLEANER
+   ========================================= */
 
 function cleanMarkdown(text: string) {
   return text
-    .replace(/\*\*(.*?)\*\*/g, '$1')
-    .replace(/__(.*?)__/g, '$1')
-    .replace(/`(.*?)`/g, '$1');
+    .replace(
+      /\*\*(.*?)\*\*/g,
+      '$1'
+    )
+    .replace(
+      /__(.*?)__/g,
+      '$1'
+    )
+    .replace(
+      /`(.*?)`/g,
+      '$1'
+    );
 }
 
 
