@@ -49,16 +49,39 @@ function App() {
     setAnalyzed(false);
   };
 
-  const analyzeCode = () => {
+  const analyzeCode = async () => {
     if (!code.trim() || !problem.trim()) return;
-
+  
     setAnalyzing(true);
     setAnalyzed(false);
-
-    setTimeout(() => {
-      setAnalyzing(false);
+  
+    try {
+      const response = await fetch('/api/analyze', {
+        method: 'POST',
+        headers: {
+          'Content-Type': 'application/json',
+        },
+        body: JSON.stringify({
+          code,
+          problem,
+          language,
+        }),
+      });
+  
+      const data = await response.json();
+  
+      if (!response.ok) {
+        throw new Error(data.error || 'Analysis failed');
+      }
+  
+      console.log('Gemini analysis:', data.analysis);
+  
       setAnalyzed(true);
-    }, 1800);
+    } catch (error) {
+      console.error('DevAgent analysis failed:', error);
+    } finally {
+      setAnalyzing(false);
+    }
   };
 
   return (
