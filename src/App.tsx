@@ -74,6 +74,7 @@ function App() {
         throw new Error(data.error || 'Analysis failed');
       }
   
+      
       console.log('Gemini analysis:', data.analysis);
   
       setAnalyzed(true);
