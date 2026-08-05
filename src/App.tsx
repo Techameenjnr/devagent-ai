@@ -1,4 +1,4 @@
-import { useState } from 'react';
+import { useState, type ReactNode } from 'react';
 import './App.css';
 
 type Language = 'JavaScript' | 'TypeScript' | 'Python';
@@ -11,6 +11,7 @@ const demoCases = {
 }`,
     problem: 'The function crashes when I try to find a user.',
   },
+
   TypeScript: {
     code: `interface User {
   name: string;
@@ -23,6 +24,7 @@ const user: User = {
 };`,
     problem: 'TypeScript says there is a type error in my user object.',
   },
+
   Python: {
     code: `def calculate_average(numbers):
     total = sum(numbers)
@@ -38,23 +40,25 @@ function App() {
   const [language, setLanguage] = useState<Language>('JavaScript');
   const [code, setCode] = useState('');
   const [problem, setProblem] = useState('');
+
   const [analyzing, setAnalyzing] = useState(false);
   const [analyzed, setAnalyzed] = useState(false);
 
-  // NEW: stores the real Gemini response
   const [aiAnalysis, setAiAnalysis] = useState('');
-
-  // NEW: stores API errors
   const [error, setError] = useState('');
+
+  const [copied, setCopied] = useState(false);
 
   const loadDemo = () => {
     const demo = demoCases[language];
 
     setCode(demo.code);
     setProblem(demo.problem);
+
     setAnalyzed(false);
     setAiAnalysis('');
     setError('');
+    setCopied(false);
   };
 
   const analyzeCode = async () => {
@@ -64,6 +68,7 @@ function App() {
     setAnalyzed(false);
     setAiAnalysis('');
     setError('');
+    setCopied(false);
 
     try {
       const response = await fetch('/api/analyze', {
@@ -78,10 +83,20 @@ function App() {
         }),
       });
 
-      const data = await response.json();
+      const rawResponse = await response.text();
+
+      let data;
+
+      try {
+        data = JSON.parse(rawResponse);
+      } catch {
+        throw new Error(
+          'The server returned an invalid response. Check the API route and Gemini configuration.'
+        );
+      }
 
       if (!response.ok) {
-        throw new Error(data.error || 'Analysis failed');
+        throw new Error(data.error || 'Analysis failed.');
       }
 
       if (!data.analysis) {
@@ -90,15 +105,14 @@ function App() {
 
       console.log('REAL GEMINI ANALYSIS:', data.analysis);
 
-      // Store Gemini's actual response
       setAiAnalysis(data.analysis);
       setAnalyzed(true);
-    } catch (error) {
-      console.error('DevAgent analysis failed:', error);
+    } catch (err) {
+      console.error('DevAgent analysis failed:', err);
 
       setError(
-        error instanceof Error
-          ? error.message
+        err instanceof Error
+          ? err.message
           : 'Something went wrong while analyzing the code.'
       );
     } finally {
@@ -106,12 +120,59 @@ function App() {
     }
   };
 
+  const copyAnalysis = async () => {
+    if (!aiAnalysis) return;
+
+    try {
+      if (navigator.clipboard && window.isSecureContext) {
+        await navigator.clipboard.writeText(aiAnalysis);
+      } else {
+        const textArea = document.createElement('textarea');
+
+        textArea.value = aiAnalysis;
+        textArea.style.position = 'fixed';
+        textArea.style.left = '-9999px';
+
+        document.body.appendChild(textArea);
+        textArea.focus();
+        textArea.select();
+
+        document.execCommand('copy');
+        document.body.removeChild(textArea);
+      }
+
+      setCopied(true);
+
+      setTimeout(() => {
+        setCopied(false);
+      }, 2000);
+    } catch (err) {
+      console.error('Copy failed:', err);
+      setError('Unable to copy the analysis. Please select and copy it manually.');
+    }
+  };
+
+  const resetAnalysis = () => {
+    setAnalyzed(false);
+    setAiAnalysis('');
+    setError('');
+    setCopied(false);
+  };
+
   return (
     <div className="app">
+
+      {/* NAVBAR */}
       <nav className="navbar">
         <div className="brand">
-          <div className="brand-icon">✦</div>
-          <span>DevAgent</span>
+          <div className="brand-icon">
+            <span>⌁</span>
+          </div>
+
+          <div>
+            <strong>DevAgent</strong>
+            <small>AI DEBUGGING SYSTEM</small>
+          </div>
         </div>
 
         <div className="nav-links">
@@ -122,251 +183,446 @@ function App() {
         <button
           className="nav-button"
           onClick={() =>
-            document.getElementById('analyze')?.scrollIntoView()
+            document.getElementById('analyze')?.scrollIntoView({
+              behavior: 'smooth',
+            })
           }
         >
-          Try DevAgent
+          Launch Agent
         </button>
       </nav>
 
       <main>
+
+        {/* HERO */}
         <section className="hero">
+
+          <div className="hero-grid-bg" />
+
           <div className="hero-badge">
             <span className="pulse" />
-            AI SOFTWARE ENGINEERING AGENT
+            DEVAGENT ONLINE // AI SOFTWARE SECURITY
+          </div>
+
+          <div className="terminal-label">
+            <span>&gt; SYSTEM STATUS:</span>
+            <strong> OPERATIONAL</strong>
           </div>
 
           <h1>
             Debug smarter.
             <br />
-            <span>Understand your code.</span>
+            <span>Think like the machine.</span>
           </h1>
 
           <p>
-            DevAgent analyzes your code, finds likely root causes, generates
-            fixes, and explains what went wrong.
+            DevAgent investigates your code, identifies root causes,
+            proposes fixes, generates tests, and explains the problem
+            in beginner-friendly language.
           </p>
 
           <div className="hero-actions">
+
             <button
               className="primary-button"
               onClick={() =>
-                document.getElementById('analyze')?.scrollIntoView()
+                document.getElementById('analyze')?.scrollIntoView({
+                  behavior: 'smooth',
+                })
               }
             >
-              Analyze Code <span>→</span>
+              Start Analysis <span>→</span>
             </button>
 
-            <button className="secondary-button" onClick={loadDemo}>
+            <button
+              className="secondary-button"
+              onClick={loadDemo}
+            >
               Load Demo
             </button>
+
           </div>
 
           <div className="hero-grid">
-            <span>01 / UNDERSTAND</span>
-            <span>02 / ANALYZE</span>
-            <span>03 / FIX</span>
-            <span>04 / VERIFY</span>
+            <span>[01] INPUT</span>
+            <span>[02] SCAN</span>
+            <span>[03] DIAGNOSE</span>
+            <span>[04] RESOLVE</span>
           </div>
+
         </section>
 
+
+        {/* WORKSPACE */}
         <section className="workspace" id="analyze">
+
           <div className="section-heading">
+
             <div>
-              <div className="eyebrow">THE AGENT WORKSPACE</div>
-              <h2>Give DevAgent a problem.</h2>
+              <div className="eyebrow">
+                // AGENT WORKSPACE
+              </div>
+
+              <h2>
+                Give DevAgent a problem.
+              </h2>
             </div>
 
-            <p>Paste your code and describe what's going wrong.</p>
+            <p>
+              Paste your code and describe what's going wrong.
+            </p>
+
           </div>
 
+
           <div className="workspace-grid">
+
+            {/* CODE INPUT */}
             <div className="panel code-panel">
+
               <div className="panel-header">
+
                 <div>
-                  <span className="panel-label">YOUR CODE</span>
-                  <span className="panel-subtitle">Source input</span>
+                  <span className="panel-label">
+                    SOURCE_INPUT
+                  </span>
+
+                  <span className="panel-subtitle">
+                    Developer code
+                  </span>
                 </div>
 
                 <select
                   value={language}
                   onChange={(e) => {
                     setLanguage(e.target.value as Language);
-                    setAnalyzed(false);
-                    setAiAnalysis('');
-                    setError('');
+                    resetAnalysis();
                   }}
                 >
                   <option>JavaScript</option>
                   <option>TypeScript</option>
                   <option>Python</option>
                 </select>
+
               </div>
 
-              <textarea
-                className="code-editor"
-                value={code}
-                onChange={(e) => {
-                  setCode(e.target.value);
-                  setAnalyzed(false);
-                  setAiAnalysis('');
-                  setError('');
-                }}
-                placeholder="// Paste your code here..."
-                spellCheck={false}
-              />
+
+              <div className="editor-toolbar">
+                <span>
+                  ● ● ●
+                </span>
+
+                <span>
+                  {language.toLowerCase()}://input
+                </span>
+
+                <span>
+                  READ / WRITE
+                </span>
+              </div>
+
+
+              <div className="code-wrapper">
+
+                <div className="line-numbers">
+                  {code
+                    ? code.split('\n').map((_, index) => (
+                        <span key={index}>
+                          {String(index + 1).padStart(2, '0')}
+                        </span>
+                      ))
+                    : Array.from({ length: 8 }).map((_, index) => (
+                        <span key={index}>
+                          {String(index + 1).padStart(2, '0')}
+                        </span>
+                      ))}
+                </div>
+
+                <textarea
+                  className="code-editor"
+                  value={code}
+                  onChange={(e) => {
+                    setCode(e.target.value);
+                    resetAnalysis();
+                  }}
+                  placeholder="// Paste your code here..."
+                  spellCheck={false}
+                />
+
+              </div>
+
 
               <div className="problem-area">
-                <label>WHAT'S WRONG?</label>
+
+                <label>
+                  &gt; DESCRIBE_THE_PROBLEM
+                </label>
 
                 <textarea
                   value={problem}
                   onChange={(e) => {
                     setProblem(e.target.value);
-                    setAnalyzed(false);
-                    setAiAnalysis('');
-                    setError('');
+                    resetAnalysis();
                   }}
                   placeholder="Describe the error or behavior you're experiencing..."
                 />
+
               </div>
 
+
               <div className="button-row">
-                <button className="demo-button" onClick={loadDemo}>
-                  Load Demo
+
+                <button
+                  className="demo-button"
+                  onClick={loadDemo}
+                >
+                  LOAD DEMO
                 </button>
 
                 <button
                   className="analyze-button"
                   onClick={analyzeCode}
                   disabled={
-                    analyzing || !code.trim() || !problem.trim()
+                    analyzing ||
+                    !code.trim() ||
+                    !problem.trim()
                   }
                 >
-                  {analyzing ? 'Analyzing...' : 'Analyze Code →'}
+                  {analyzing
+                    ? 'SCANNING SYSTEM...'
+                    : 'RUN ANALYSIS →'}
                 </button>
+
               </div>
+
             </div>
 
+
+            {/* ANALYSIS */}
             <div className="panel analysis-panel">
+
               <div className="panel-header">
+
                 <div>
-                  <span className="panel-label">AGENT ANALYSIS</span>
+                  <span className="panel-label">
+                    AGENT_ANALYSIS
+                  </span>
 
                   <span className="panel-subtitle">
                     {analyzing
-                      ? 'Gemini agent is working...'
+                      ? 'Gemini agent is investigating...'
                       : analyzed
-                        ? 'Analysis complete'
-                        : 'Awaiting analysis'}
+                        ? 'Investigation complete'
+                        : 'Awaiting input'}
                   </span>
                 </div>
 
                 <div className="status-dot">
+
                   <span />
+
                   {analyzing
-                    ? 'ACTIVE'
+                    ? 'SCANNING'
                     : analyzed
-                      ? 'DONE'
+                      ? 'SECURE'
                       : 'READY'}
+
                 </div>
+
               </div>
 
+
               {/* EMPTY STATE */}
-              {!analyzing && !analyzed && !error && (
-                <div className="empty-state">
-                  <div className="agent-orb">✦</div>
+              {!analyzing &&
+                !analyzed &&
+                !error && (
 
-                  <h3>Ready to investigate.</h3>
+                  <div className="empty-state">
 
-                  <p>
-                    Give the agent some code and a problem. It will break the
-                    issue down step by step.
-                  </p>
-                </div>
-              )}
+                    <div className="terminal-orb">
+                      <span>⌁</span>
+                    </div>
 
-              {/* LOADING STATE */}
+                    <div className="scan-line">
+                      SYSTEM READY
+                    </div>
+
+                    <h3>
+                      Awaiting investigation target.
+                    </h3>
+
+                    <p>
+                      Provide source code and a problem.
+                      DevAgent will investigate the issue and
+                      explain the solution step by step.
+                    </p>
+
+                    <div className="empty-command">
+                      <span>&gt;</span> agent.await_input()
+                      <span className="cursor">_</span>
+                    </div>
+
+                  </div>
+                )}
+
+
+              {/* LOADING */}
               {analyzing && (
+
                 <div className="agent-progress">
-                  <AgentStep text="Understanding the task" active />
-                  <AgentStep text="Inspecting the code" active />
-                  <AgentStep text="Identifying root cause" active />
-                  <AgentStep text="Designing a fix" active />
-                  <AgentStep text="Generating tests" active />
+
+                  <div className="scan-header">
+                    <span>LIVE ANALYSIS</span>
+                    <span className="blink">●</span>
+                  </div>
+
+                  <AgentStep
+                    text="Understanding the developer's problem"
+                    active
+                  />
+
+                  <AgentStep
+                    text="Inspecting source code"
+                    active
+                  />
+
+                  <AgentStep
+                    text="Identifying root cause"
+                    active
+                  />
+
+                  <AgentStep
+                    text="Designing recommended fix"
+                    active
+                  />
+
+                  <AgentStep
+                    text="Generating verification tests"
+                    active
+                  />
+
                 </div>
               )}
 
-              {/* ERROR STATE */}
+
+              {/* ERROR */}
               {!analyzing && error && (
+
                 <div className="analysis-results">
-                  <div className="result-block">
-                    <div className="result-title">
+
+                  <div className="security-alert">
+
+                    <div className="alert-header">
                       <span>⚠</span>
-                      <strong>Analysis Error</strong>
+                      ANALYSIS_FAILURE
                     </div>
 
                     <p>{error}</p>
 
-                    <p>
-                      Check that the Gemini API is configured correctly and
-                      try again.
-                    </p>
+                    <div className="alert-help">
+                      Check your Gemini API configuration,
+                      environment variables, and deployment logs.
+                    </div>
+
                   </div>
+
                 </div>
               )}
 
-              {/* REAL GEMINI RESULT */}
-              {analyzed && !analyzing && aiAnalysis && (
-                <div className="analysis-results">
-                  <div className="result-block">
-                    <div className="result-title">
-                      <span>✦</span>
-                      <strong>Gemini AI Analysis</strong>
+
+              {/* GEMINI RESULT */}
+              {analyzed &&
+                !analyzing &&
+                aiAnalysis && (
+
+                  <div className="analysis-results">
+
+                    <div className="analysis-terminal-header">
+
+                      <div>
+                        <span className="terminal-dot green" />
+                        <span className="terminal-dot yellow" />
+                        <span className="terminal-dot red" />
+                      </div>
+
+                      <span>
+                        DEVAGENT // GEMINI_ANALYSIS
+                      </span>
 
                       <button
-                        onClick={() =>
-                          navigator.clipboard?.writeText(aiAnalysis)
-                        }
+                        className={`copy-button ${
+                          copied ? 'copied' : ''
+                        }`}
+                        onClick={copyAnalysis}
                       >
-                        Copy
+                        {copied ? '✓ COPIED' : 'COPY REPORT'}
                       </button>
+
                     </div>
 
-                    <div
-                      style={{
-                        whiteSpace: 'pre-wrap',
-                        lineHeight: '1.7',
-                        marginTop: '14px',
-                      }}
-                    >
-                      {aiAnalysis}
+
+                    <div className="analysis-meta">
+
+                      <span>
+                        TARGET: {language.toUpperCase()}
+                      </span>
+
+                      <span>
+                        ENGINE: GEMINI
+                      </span>
+
+                      <span>
+                        STATUS: COMPLETE
+                      </span>
+
                     </div>
+
+
+                    <div className="ai-response">
+
+                      {formatAnalysis(aiAnalysis)}
+
+                    </div>
+
+
+                    <div className="analysis-footer">
+
+                      <span>
+                        ✓ ANALYSIS COMPLETE
+                      </span>
+
+                      <span>
+                        DEVAGENT / AI ENGINE
+                      </span>
+
+                    </div>
+
                   </div>
+                )}
 
-                  <div className="result-block">
-                    <div className="result-title">
-                      <span>✓</span>
-                      <strong>Analysis Complete</strong>
-                    </div>
-
-                    <p>
-                      DevAgent analyzed your {language} code using Gemini
-                      and generated the debugging report above.
-                    </p>
-                  </div>
-                </div>
-              )}
             </div>
+
           </div>
+
         </section>
 
-        <section className="how-section" id="how-it-works">
-          <div className="eyebrow">HOW IT WORKS</div>
 
-          <h2>From bug to understanding.</h2>
+        {/* HOW IT WORKS */}
+        <section
+          className="how-section"
+          id="how-it-works"
+        >
+
+          <div className="eyebrow">
+            // SYSTEM PIPELINE
+          </div>
+
+          <h2>
+            From bug to understanding.
+          </h2>
 
           <div className="steps">
+
             <Step
               number="01"
               title="Describe"
@@ -376,30 +632,55 @@ function App() {
             <Step
               number="02"
               title="Investigate"
-              text="The agent breaks down the problem and inspects the code."
+              text="The AI agent inspects the code and identifies the likely root cause."
             />
 
             <Step
               number="03"
               title="Resolve"
-              text="Get a proposed fix, tests, and a clear explanation."
+              text="Get a beginner-friendly fix, tests, and an explanation of what you learned."
             />
+
           </div>
+
         </section>
+
       </main>
 
+
       <footer>
+
         <div className="brand">
-          <div className="brand-icon">✦</div>
-          <span>DevAgent</span>
+
+          <div className="brand-icon">
+            <span>⌁</span>
+          </div>
+
+          <div>
+            <strong>DevAgent</strong>
+            <small>AI DEBUGGING SYSTEM</small>
+          </div>
+
         </div>
 
-        <span>AI-assisted software engineering.</span>
-        <span>Built for the hackathon.</span>
+        <span>
+          AI-assisted software engineering.
+        </span>
+
+        <span>
+          Built for the hackathon.
+        </span>
+
       </footer>
+
     </div>
   );
 }
+
+
+/* -------------------------------- */
+/* AGENT STEP                       */
+/* -------------------------------- */
 
 function AgentStep({
   text,
@@ -409,12 +690,32 @@ function AgentStep({
   active?: boolean;
 }) {
   return (
-    <div className={`agent-step ${active ? 'active' : ''}`}>
-      <div className="step-indicator">{active ? '✓' : '○'}</div>
+    <div
+      className={`agent-step ${
+        active ? 'active' : ''
+      }`}
+    >
+
+      <div className="step-indicator">
+        {active ? '✓' : '○'}
+      </div>
+
       <span>{text}</span>
+
+      {active && (
+        <span className="step-status">
+          OK
+        </span>
+      )}
+
     </div>
   );
 }
+
+
+/* -------------------------------- */
+/* HOW IT WORKS CARD                */
+/* -------------------------------- */
 
 function Step({
   number,
@@ -427,11 +728,158 @@ function Step({
 }) {
   return (
     <div className="step-card">
-      <span>{number}</span>
+
+      <span className="step-number">
+        [{number}]
+      </span>
+
       <h3>{title}</h3>
+
       <p>{text}</p>
+
+      <div className="step-command">
+        &gt; execute()
+      </div>
+
     </div>
   );
 }
+
+
+/* -------------------------------- */
+/* GEMINI RESPONSE FORMATTER        */
+/* -------------------------------- */
+
+function formatAnalysis(text: string) {
+  const lines = text.split('\n');
+
+  const elements: ReactNode[] = [];
+
+  let codeBuffer: string[] = [];
+  let insideCode = false;
+
+  let key = 0;
+
+  for (const line of lines) {
+    const trimmed = line.trim();
+
+    /* CODE BLOCK */
+    if (trimmed.startsWith('```')) {
+      if (insideCode) {
+        elements.push(
+          <pre className="ai-code" key={key++}>
+            <code>{codeBuffer.join('\n')}</code>
+          </pre>
+        );
+
+        codeBuffer = [];
+        insideCode = false;
+      } else {
+        insideCode = true;
+      }
+
+      continue;
+    }
+
+    if (insideCode) {
+      codeBuffer.push(line);
+      continue;
+    }
+
+    /* EMPTY LINE */
+    if (!trimmed) {
+      elements.push(
+        <div
+          className="ai-spacer"
+          key={key++}
+        />
+      );
+
+      continue;
+    }
+
+    /* HEADINGS */
+    const headingMatch = trimmed.match(
+      /^(?:#{1,6}\s*|\d+\.\s+)(.+)$/
+    );
+
+    if (
+      headingMatch &&
+      !trimmed.startsWith('- ') &&
+      !trimmed.startsWith('* ')
+    ) {
+      elements.push(
+        <div
+          className="ai-section"
+          key={key++}
+        >
+          <div className="ai-section-title">
+            <span className="section-marker">
+              //
+            </span>
+
+            <h3>
+              {headingMatch[1]
+                .replace(/\*\*/g, '')
+                .replace(/`/g, '')}
+            </h3>
+          </div>
+        </div>
+      );
+
+      continue;
+    }
+
+    /* BULLET */
+    if (
+      trimmed.startsWith('- ') ||
+      trimmed.startsWith('* ')
+    ) {
+      elements.push(
+        <div
+          className="ai-bullet"
+          key={key++}
+        >
+          <span className="bullet-marker">
+            &gt;
+          </span>
+
+          <span>
+            {cleanMarkdown(
+              trimmed.substring(2)
+            )}
+          </span>
+        </div>
+      );
+
+      continue;
+    }
+
+    /* NORMAL TEXT */
+    elements.push(
+      <p
+        className="ai-paragraph"
+        key={key++}
+      >
+        {cleanMarkdown(trimmed)}
+      </p>
+    );
+  }
+
+  return elements;
+}
+
+
+/* -------------------------------- */
+/* SIMPLE MARKDOWN CLEANER           */
+/* -------------------------------- */
+
+function cleanMarkdown(text: string) {
+  return text
+    .replace(/\*\*(.*?)\*\*/g, '$1')
+    .replace(/__(.*?)__/g, '$1')
+    .replace(/`(.*?)`/g, '$1');
+}
+
 
 export default App;
