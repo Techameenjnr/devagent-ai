@@ -17,12 +17,7 @@ const demoCases: Record<
 ];
 
 function getUser(id) {
-  const user = users.find(user => user.id === id);
-
-  if (!user) {
-    return undefined;
-  }
-
+  const user = users.find(user => user.id = id);
   return user.name;
 }`,
     problem:
