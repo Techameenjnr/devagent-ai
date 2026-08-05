@@ -41,20 +41,30 @@ function App() {
   const [analyzing, setAnalyzing] = useState(false);
   const [analyzed, setAnalyzed] = useState(false);
 
+  // NEW: stores the real Gemini response
+  const [aiAnalysis, setAiAnalysis] = useState('');
+
+  // NEW: stores API errors
+  const [error, setError] = useState('');
+
   const loadDemo = () => {
     const demo = demoCases[language];
 
     setCode(demo.code);
     setProblem(demo.problem);
     setAnalyzed(false);
+    setAiAnalysis('');
+    setError('');
   };
 
   const analyzeCode = async () => {
     if (!code.trim() || !problem.trim()) return;
-  
+
     setAnalyzing(true);
     setAnalyzed(false);
-  
+    setAiAnalysis('');
+    setError('');
+
     try {
       const response = await fetch('/api/analyze', {
         method: 'POST',
@@ -67,18 +77,30 @@ function App() {
           language,
         }),
       });
-  
+
       const data = await response.json();
-  
+
       if (!response.ok) {
         throw new Error(data.error || 'Analysis failed');
       }
-  
-      console.log('Gemini analysis:', data.analysis);
-  
+
+      if (!data.analysis) {
+        throw new Error('Gemini returned an empty analysis.');
+      }
+
+      console.log('REAL GEMINI ANALYSIS:', data.analysis);
+
+      // Store Gemini's actual response
+      setAiAnalysis(data.analysis);
       setAnalyzed(true);
     } catch (error) {
       console.error('DevAgent analysis failed:', error);
+
+      setError(
+        error instanceof Error
+          ? error.message
+          : 'Something went wrong while analyzing the code.'
+      );
     } finally {
       setAnalyzing(false);
     }
@@ -99,7 +121,9 @@ function App() {
 
         <button
           className="nav-button"
-          onClick={() => document.getElementById('analyze')?.scrollIntoView()}
+          onClick={() =>
+            document.getElementById('analyze')?.scrollIntoView()
+          }
         >
           Try DevAgent
         </button>
@@ -152,6 +176,7 @@ function App() {
               <div className="eyebrow">THE AGENT WORKSPACE</div>
               <h2>Give DevAgent a problem.</h2>
             </div>
+
             <p>Paste your code and describe what's going wrong.</p>
           </div>
 
@@ -168,6 +193,8 @@ function App() {
                   onChange={(e) => {
                     setLanguage(e.target.value as Language);
                     setAnalyzed(false);
+                    setAiAnalysis('');
+                    setError('');
                   }}
                 >
                   <option>JavaScript</option>
@@ -182,6 +209,8 @@ function App() {
                 onChange={(e) => {
                   setCode(e.target.value);
                   setAnalyzed(false);
+                  setAiAnalysis('');
+                  setError('');
                 }}
                 placeholder="// Paste your code here..."
                 spellCheck={false}
@@ -195,6 +224,8 @@ function App() {
                   onChange={(e) => {
                     setProblem(e.target.value);
                     setAnalyzed(false);
+                    setAiAnalysis('');
+                    setError('');
                   }}
                   placeholder="Describe the error or behavior you're experiencing..."
                 />
@@ -208,7 +239,9 @@ function App() {
                 <button
                   className="analyze-button"
                   onClick={analyzeCode}
-                  disabled={analyzing || !code.trim() || !problem.trim()}
+                  disabled={
+                    analyzing || !code.trim() || !problem.trim()
+                  }
                 >
                   {analyzing ? 'Analyzing...' : 'Analyze Code →'}
                 </button>
@@ -219,21 +252,33 @@ function App() {
               <div className="panel-header">
                 <div>
                   <span className="panel-label">AGENT ANALYSIS</span>
+
                   <span className="panel-subtitle">
-                    {analyzing ? 'Agent is working...' : 'Awaiting analysis'}
+                    {analyzing
+                      ? 'Gemini agent is working...'
+                      : analyzed
+                        ? 'Analysis complete'
+                        : 'Awaiting analysis'}
                   </span>
                 </div>
 
                 <div className="status-dot">
                   <span />
-                  {analyzing ? 'ACTIVE' : 'READY'}
+                  {analyzing
+                    ? 'ACTIVE'
+                    : analyzed
+                      ? 'DONE'
+                      : 'READY'}
                 </div>
               </div>
 
-              {!analyzing && !analyzed && (
+              {/* EMPTY STATE */}
+              {!analyzing && !analyzed && !error && (
                 <div className="empty-state">
                   <div className="agent-orb">✦</div>
+
                   <h3>Ready to investigate.</h3>
+
                   <p>
                     Give the agent some code and a problem. It will break the
                     issue down step by step.
@@ -241,63 +286,75 @@ function App() {
                 </div>
               )}
 
+              {/* LOADING STATE */}
               {analyzing && (
                 <div className="agent-progress">
                   <AgentStep text="Understanding the task" active />
                   <AgentStep text="Inspecting the code" active />
-                  <AgentStep text="Identifying root cause" />
-                  <AgentStep text="Designing a fix" />
-                  <AgentStep text="Generating tests" />
+                  <AgentStep text="Identifying root cause" active />
+                  <AgentStep text="Designing a fix" active />
+                  <AgentStep text="Generating tests" active />
                 </div>
               )}
 
-              {analyzed && !analyzing && (
+              {/* ERROR STATE */}
+              {!analyzing && error && (
                 <div className="analysis-results">
-                  <ResultBlock
-                    icon="⌁"
-                    title="Problem"
-                    text="The code contains a logic or runtime issue that prevents the expected operation from completing safely."
-                  />
-
-                  <ResultBlock
-                    icon="◎"
-                    title="Root Cause"
-                    text="The input is not being validated correctly before the operation is performed."
-                  />
-
-                  <ResultBlock
-                    icon="✦"
-                    title="Recommended Fix"
-                    text="Validate the input and handle the failure case before continuing with the operation."
-                  />
-
                   <div className="result-block">
                     <div className="result-title">
-                      <span>▣</span>
-                      <strong>Corrected Code</strong>
+                      <span>⚠</span>
+                      <strong>Analysis Error</strong>
+                    </div>
+
+                    <p>{error}</p>
+
+                    <p>
+                      Check that the Gemini API is configured correctly and
+                      try again.
+                    </p>
+                  </div>
+                </div>
+              )}
+
+              {/* REAL GEMINI RESULT */}
+              {analyzed && !analyzing && aiAnalysis && (
+                <div className="analysis-results">
+                  <div className="result-block">
+                    <div className="result-title">
+                      <span>✦</span>
+                      <strong>Gemini AI Analysis</strong>
+
                       <button
-                        onClick={() => navigator.clipboard?.writeText(code)}
+                        onClick={() =>
+                          navigator.clipboard?.writeText(aiAnalysis)
+                        }
                       >
                         Copy
                       </button>
                     </div>
 
-                    <pre>
-                      <code>{code}</code>
-                    </pre>
+                    <div
+                      style={{
+                        whiteSpace: 'pre-wrap',
+                        lineHeight: '1.7',
+                        marginTop: '14px',
+                      }}
+                    >
+                      {aiAnalysis}
+                    </div>
                   </div>
 
-                  <ResultBlock
-                    icon="✓"
-                    title="Tests"
-                    text="Test valid input, invalid input, empty input, and the expected failure state."
-                  />
+                  <div className="result-block">
+                    <div className="result-title">
+                      <span>✓</span>
+                      <strong>Analysis Complete</strong>
+                    </div>
 
-                  <ResultBlock
-                    icon="?"
-                    title="What You Learned"
-                    text="Good debugging starts by understanding the data flow and identifying where assumptions about the input can fail."
-                  />
+                    <p>
+                      DevAgent analyzed your {language} code using Gemini
+                      and generated the debugging report above.
+                    </p>
+                  </div>
                 </div>
               )}
             </div>
@@ -306,6 +363,7 @@ function App() {
 
         <section className="how-section" id="how-it-works">
           <div className="eyebrow">HOW IT WORKS</div>
+
           <h2>From bug to understanding.</h2>
 
           <div className="steps">
@@ -314,11 +372,13 @@ function App() {
               title="Describe"
               text="Paste your code and explain the problem."
             />
+
             <Step
               number="02"
               title="Investigate"
               text="The agent breaks down the problem and inspects the code."
             />
+
             <Step
               number="03"
               title="Resolve"
@@ -333,6 +393,7 @@ function App() {
           <div className="brand-icon">✦</div>
           <span>DevAgent</span>
         </div>
+
         <span>AI-assisted software engineering.</span>
         <span>Built for the hackathon.</span>
       </footer>
@@ -351,26 +412,6 @@ function AgentStep({
     <div className={`agent-step ${active ? 'active' : ''}`}>
       <div className="step-indicator">{active ? '✓' : '○'}</div>
       <span>{text}</span>
-    </div>
-  );
-}
-
-function ResultBlock({
-  icon,
-  title,
-  text,
-}: {
-  icon: string;
-  title: string;
-  text: string;
-}) {
-  return (
-    <div className="result-block">
-      <div className="result-title">
-        <span>{icon}</span>
-        <strong>{title}</strong>
-      </div>
-      <p>{text}</p>
     </div>
   );
 }
