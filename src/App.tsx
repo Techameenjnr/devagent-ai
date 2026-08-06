@@ -907,6 +907,8 @@ function formatAnalysis(text: string) {
 
   let key = 0;
 
+  let inLabSection = false;
+
   for (const line of lines) {
     const trimmed = line.trim();
 
@@ -986,6 +988,61 @@ function formatAnalysis(text: string) {
       );
 
       continue;
+    }
+
+    /* DETECT VERIFICATION LAB SECTION */
+
+    if (
+      /^#{1,6}\s*VERIFICATION LAB\s*$/i.test(
+        trimmed
+      )
+    ) {
+      inLabSection = true;
+
+      elements.push(
+        <div
+          className="lab-divider"
+          key={key++}
+        />
+      );
+
+      elements.push(
+        <div
+          className="lab-header"
+          key={key++}
+        >
+
+          <span className="lab-icon">
+            ⚛
+          </span>
+
+          <span className="lab-title">
+            VERIFICATION LAB
+          </span>
+
+          <span className="lab-badge">
+            STATIC ONLY
+          </span>
+
+        </div>
+      );
+
+      continue;
+    }
+
+    /* INSIDE LAB SECTION */
+
+    if (inLabSection) {
+      const labNode = renderLabLine(
+        trimmed,
+        key
+      );
+
+      if (labNode) {
+        elements.push(labNode.node);
+        key = labNode.nextKey;
+        continue;
+      }
     }
 
     /* HEADINGS */
@@ -1074,6 +1131,267 @@ function formatAnalysis(text: string) {
   }
 
   return elements;
+}
+
+
+/* =========================================
+   VERIFICATION LAB LINE RENDERER
+   ========================================= */
+
+function renderLabLine(
+  trimmed: string,
+  key: number
+):
+  | {
+      node: ReactNode;
+      nextKey: number;
+    }
+  | null {
+  const headingMatch = trimmed.match(
+    /^#{1,6}\s+(.+)$/
+  );
+
+  if (
+    headingMatch &&
+    !trimmed.startsWith('- ') &&
+    !trimmed.startsWith('* ')
+  ) {
+    const title = headingMatch[1]
+      .replace(/\*\*/g, '')
+      .replace(/`/g, '');
+
+    return {
+      nextKey: key + 1,
+      node: (
+        <div
+          className="lab-subsection"
+          key={key}
+        >
+
+          <div className="lab-subsection-title">
+
+            <span className="lab-marker">
+              ▸
+            </span>
+
+            <h4>
+              {title}
+            </h4>
+
+            <span className="lab-sub-line" />
+
+          </div>
+
+        </div>
+      ),
+    };
+  }
+
+  if (
+    trimmed.startsWith('- ') ||
+    trimmed.startsWith('* ')
+  ) {
+    const content = trimmed.substring(2);
+    const statusMatch = content.match(
+      /Status:\s*(.+)/i
+    );
+
+    if (statusMatch) {
+      const status = statusMatch[1].trim();
+      const label = content
+        .replace(/Status:\s*.*/i, '')
+        .trim();
+
+      return {
+        nextKey: key + 1,
+        node: (
+          <div
+            className="lab-bullet lab-status-row"
+            key={key}
+          >
+
+            <span className="lab-bullet-marker">
+              ▦
+            </span>
+
+            <span className="lab-status-label">
+              {cleanMarkdown(label)}
+            </span>
+
+            <span
+              className={`lab-status-badge ${getLabStatusClass(
+                status
+              )}`}
+            >
+              {cleanMarkdown(status)}
+            </span>
+
+          </div>
+        ),
+      };
+    }
+
+    return {
+      nextKey: key + 1,
+      node: (
+        <div
+          className="lab-bullet"
+          key={key}
+        >
+
+          <span className="lab-bullet-marker">
+            ▦
+          </span>
+
+          <span>
+            {cleanMarkdown(content)}
+          </span>
+
+        </div>
+      ),
+    };
+  }
+
+  const confirmedMatch = trimmed.match(
+    /^CONFIRMED BY STATIC ANALYSIS:\s*(.*)$/i
+  );
+
+  if (confirmedMatch) {
+    return {
+      nextKey: key + 1,
+      node: (
+        <div
+          className="lab-confirmed-row"
+          key={key}
+        >
+
+          <span className="lab-confirmed-badge">
+            ✓ STATIC
+          </span>
+
+          <span>
+            {cleanMarkdown(
+              confirmedMatch[1]
+            )}
+          </span>
+
+        </div>
+      ),
+    };
+  }
+
+  const requiresMatch = trimmed.match(
+    /^REQUIRES RUNTIME TESTING:\s*(.*)$/i
+  );
+
+  if (requiresMatch) {
+    return {
+      nextKey: key + 1,
+      node: (
+        <div
+          className="lab-requires-row"
+          key={key}
+        >
+
+          <span className="lab-requires-badge">
+            ◷ RUNTIME
+          </span>
+
+          <span>
+            {cleanMarkdown(
+              requiresMatch[1]
+            )}
+          </span>
+
+        </div>
+      ),
+    };
+  }
+
+  const runtimeMatch = trimmed.match(
+    /^Runtime verification:\s*(.*)$/i
+  );
+
+  if (runtimeMatch) {
+    return {
+      nextKey: key + 1,
+      node: (
+        <div
+          className="lab-runtime-row"
+          key={key}
+        >
+
+          <span className="lab-runtime-badge">
+            ⚠
+          </span>
+
+          <span>
+            Runtime verification:{' '}
+            {cleanMarkdown(
+              runtimeMatch[1]
+            )}
+          </span>
+
+        </div>
+      ),
+    };
+  }
+
+  const statusLineMatch = trimmed.match(
+    /^(STATICALLY CONFIRMED|REQUIRES RUNTIME TEST|NOT VERIFIED)$/i
+  );
+
+  if (statusLineMatch) {
+    const status = statusLineMatch[1].toUpperCase();
+
+    return {
+      nextKey: key + 1,
+      node: (
+        <div
+          className="lab-status-line"
+          key={key}
+        >
+
+          <span
+            className={`lab-status-badge ${getLabStatusClass(
+              status
+            )}`}
+          >
+            {status}
+          </span>
+
+        </div>
+      ),
+    };
+  }
+
+  return {
+    nextKey: key + 1,
+    node: (
+      <p
+        className="lab-paragraph"
+        key={key}
+      >
+        {cleanMarkdown(trimmed)}
+      </p>
+    ),
+  };
+}
+
+function getLabStatusClass(status: string) {
+  const normalized = status
+    .toUpperCase()
+    .trim();
+
+  if (normalized === 'STATICALLY CONFIRMED') {
+    return 'lab-status-confirmed';
+  }
+
+  if (normalized === 'REQUIRES RUNTIME TEST') {
+    return 'lab-status-runtime';
+  }
+
+  return 'lab-status-notverified';
 }
 
 

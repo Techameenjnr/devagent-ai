@@ -1425,3 +1425,289 @@ footer > :last-child {
     font-size: 11px;
   }
 }
+
+/* =========================================
+   VERIFICATION LAB
+   ========================================= */
+
+.lab-divider {
+  height: 1px;
+
+  margin: 30px 0 20px;
+
+  background: linear-gradient(
+    90deg,
+    transparent,
+    rgba(139, 131, 255, 0.4),
+    transparent
+  );
+}
+
+.lab-header {
+  display: flex;
+  align-items: center;
+  gap: 10px;
+
+  margin-bottom: 18px;
+
+  padding: 14px 18px;
+
+  border: 1px solid
+    rgba(139, 131, 255, 0.22);
+
+  border-radius: 12px;
+
+  background:
+    linear-gradient(
+      135deg,
+      rgba(110, 98, 255, 0.1),
+      rgba(94, 140, 255, 0.05)
+    );
+}
+
+.lab-icon {
+  display: grid;
+  place-items: center;
+
+  width: 28px;
+  height: 28px;
+
+  border-radius: 8px;
+
+  background:
+    linear-gradient(
+      135deg,
+      #8b7cff,
+      #5e8cff
+    );
+
+  color: white;
+
+  font-size: 16px;
+
+  box-shadow:
+    0 0 18px
+    rgba(112, 103, 255, 0.35);
+}
+
+.lab-title {
+  font-family: 'DM Mono', monospace;
+  font-size: 13px;
+  font-weight: 500;
+  letter-spacing: 0.08em;
+
+  color: #e8eaff;
+}
+
+.lab-badge {
+  margin-left: auto;
+
+  padding: 4px 10px;
+
+  border-radius: 999px;
+
+  border: 1px solid
+    rgba(85, 214, 154, 0.3);
+
+  background:
+    rgba(85, 214, 154, 0.08);
+
+  color: #55d69a;
+
+  font-family: 'DM Mono', monospace;
+  font-size: 9px;
+  letter-spacing: 0.1em;
+}
+
+.lab-subsection {
+  padding: 12px 0 6px;
+}
+
+.lab-subsection-title {
+  display: flex;
+  align-items: center;
+  gap: 8px;
+}
+
+.lab-marker {
+  color: #8b83ff;
+  font-size: 12px;
+}
+
+.lab-subsection-title h4 {
+  margin: 0;
+
+  font-family: 'DM Mono', monospace;
+  font-size: 11px;
+  font-weight: 500;
+  letter-spacing: 0.06em;
+  text-transform: uppercase;
+
+  color: #c9c4ff;
+}
+
+.lab-sub-line {
+  flex: 1;
+  height: 1px;
+
+  background:
+    rgba(139, 131, 255, 0.15);
+}
+
+.lab-bullet {
+  display: flex;
+  gap: 10px;
+
+  margin: 6px 0;
+
+  color: #8991a2;
+  font-size: 14px;
+  line-height: 1.6;
+}
+
+.lab-bullet-marker {
+  color: #8b83ff;
+  font-size: 11px;
+
+  flex-shrink: 0;
+
+  padding-top: 2px;
+}
+
+.lab-status-row {
+  align-items: center;
+  flex-wrap: wrap;
+}
+
+.lab-status-label {
+  flex: 1;
+  min-width: 0;
+}
+
+.lab-status-badge {
+  display: inline-block;
+
+  padding: 3px 10px;
+
+  border-radius: 999px;
+
+  font-family: 'DM Mono', monospace;
+  font-size: 10px;
+  letter-spacing: 0.06em;
+  text-transform: uppercase;
+  white-space: nowrap;
+}
+
+.lab-status-confirmed {
+  border: 1px solid
+    rgba(85, 214, 154, 0.3);
+
+  background:
+    rgba(85, 214, 154, 0.1);
+
+  color: #55d69a;
+}
+
+.lab-status-runtime {
+  border: 1px solid
+    rgba(255, 193, 87, 0.3);
+
+  background:
+    rgba(255, 193, 87, 0.1);
+
+  color: #ffc157;
+}
+
+.lab-status-notverified {
+  border: 1px solid
+    rgba(255, 110, 110, 0.3);
+
+  background:
+    rgba(255, 110, 110, 0.1);
+
+  color: #ff6e6e;
+}
+
+.lab-confirmed-row,
+.lab-requires-row,
+.lab-runtime-row {
+  display: flex;
+  align-items: flex-start;
+  gap: 10px;
+
+  margin: 8px 0;
+
+  color: #8991a2;
+  font-size: 14px;
+  line-height: 1.6;
+}
+
+.lab-confirmed-badge,
+.lab-requires-badge,
+.lab-runtime-badge {
+  display: inline-block;
+
+  padding: 3px 10px;
+
+  border-radius: 6px;
+
+  font-family: 'DM Mono', monospace;
+  font-size: 10px;
+  letter-spacing: 0.06em;
+  white-space: nowrap;
+
+  flex-shrink: 0;
+}
+
+.lab-confirmed-badge {
+  border: 1px solid
+    rgba(85, 214, 154, 0.3);
+
+  background:
+    rgba(85, 214, 154, 0.1);
+
+  color: #55d69a;
+}
+
+.lab-requires-badge {
+  border: 1px solid
+    rgba(255, 193, 87, 0.3);
+
+  background:
+    rgba(255, 193, 87, 0.1);
+
+  color: #ffc157;
+}
+
+.lab-runtime-badge {
+  border: 1px solid
+    rgba(255, 110, 110, 0.3);
+
+  background:
+    rgba(255, 110, 110, 0.1);
+
+  color: #ff6e6e;
+}
+
+.lab-status-line {
+  margin: 10px 0;
+}
+
+.lab-paragraph {
+  margin: 8px 0;
+
+  color: #8991a2;
+  font-size: 14px;
+  line-height: 1.6;
+}
+
+@media (max-width: 768px) {
+  .lab-header {
+    flex-wrap: wrap;
+    gap: 8px;
+  }
+
+  .lab-badge {
+    margin-left: 0;
+  }
+}

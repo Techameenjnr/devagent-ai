@@ -120,6 +120,45 @@ function buildVerificationBlock(
   block +=
     '\n## RUNTIME VERIFICATION\nNOT AVAILABLE\nDevAgent does not execute user code. No runtime verification was performed. To confirm behavior, run the suggested tests yourself in a local environment.\n';
 
+  block += buildLabBlock(findings);
+
+  return block;
+}
+
+function buildLabBlock(findings: Finding[]): string {
+  const hasAssignmentBug = findings.some((f) =>
+    f.message.includes('Assignment expression')
+  );
+
+  let block = '\n\n---\n\n## VERIFICATION LAB\n';
+
+  block += '### VERIFICATION SUMMARY\n';
+
+  if (hasAssignmentBug) {
+    block +=
+      'Primary bug: assignment used instead of comparison inside a predicate.\n\n';
+    block +=
+      'CONFIRMED BY STATIC ANALYSIS: Assignment expression `user.id = id` detected inside `Array.find()` predicate.\n';
+    block +=
+      'REQUIRES RUNTIME TESTING: Whether the predicate returns a truthy or falsy value for a given input, and whether `find()` returns a valid element or `undefined`.\n';
+  } else if (findings.length > 0) {
+    block +=
+      'Primary bug: a source-level issue was detected by static inspection.\n\n';
+    block +=
+      'CONFIRMED BY STATIC ANALYSIS: ' +
+      findings[0].message +
+      '\n';
+    block +=
+      'REQUIRES RUNTIME TESTING: The runtime consequences of the detected issue depend on input and execution.\n';
+  } else {
+    block +=
+      'Primary bug: not deterministically confirmed by static inspection.\n\n';
+    block +=
+      'CONFIRMED BY STATIC ANALYSIS: Nothing confirmed by static inspection.\n';
+    block +=
+      'REQUIRES RUNTIME TESTING: The reported problem needs runtime testing to confirm.\n';
+  }
+
   return block;
 }
 
@@ -295,6 +334,47 @@ Only mention meaningful additional issues supported by the code.
 If there are none, write:
 "No other significant issues identified."
 
+## 10. Verification Lab
+Produce a structured verification plan a beginner can follow.
+Use EXACTLY this sub-structure (keep the headings and order):
+
+### VERIFICATION SUMMARY
+State the primary bug DevAgent believes is present.
+On two separate labeled lines write:
+CONFIRMED BY STATIC ANALYSIS: <one-sentence statement of what static inspection confirmed, or "Nothing confirmed" if nothing was>
+REQUIRES RUNTIME TESTING: <one-sentence statement of what still needs runtime testing>
+
+### TEST CASES
+Generate 2–4 concrete test cases derived ONLY from the supplied code and problem.
+Do not invent inputs that are not supported by the supplied code or problem.
+For each test case use this exact format:
+
+#### TEST CASE 01
+- Test name: <short descriptive name>
+- Input: <the concrete input, derived from the supplied code/problem>
+- Expected behavior: <what should happen if the proposed fix is correct>
+- What the test is checking: <the specific behavior being verified>
+- Status: REQUIRES RUNTIME TEST
+
+#### TEST CASE 02
+(same format, increment the number)
+
+### EXPECTED RESULT
+Explain in 2–4 sentences what should happen across the test cases if the proposed fix is correct.
+Do not claim any test was executed or passed.
+
+### VERIFICATION STATUS
+State exactly one of:
+- STATICALLY CONFIRMED
+- REQUIRES RUNTIME TEST
+- NOT VERIFIED
+
+Then on a new line write:
+Runtime verification: NOT AVAILABLE
+
+Never claim a test passed unless DevAgent actually performed that test.
+DevAgent does NOT execute user code on the server.
+
 QUALITY STANDARD:
 - Accurate
 - Beginner-friendly
@@ -303,8 +383,8 @@ QUALITY STANDARD:
 - Concise
 - Easy to scan
 
-Normally keep the response below 700 words.
-For simple bugs, aim for 300–500 words.
+Normally keep the response below 800 words.
+For simple bugs, aim for 400–600 words.
 `;
 
     const geminiResponse = await fetch(
