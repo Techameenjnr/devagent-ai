@@ -334,46 +334,7 @@ Only mention meaningful additional issues supported by the code.
 If there are none, write:
 "No other significant issues identified."
 
-## 10. Verification Lab
-Produce a structured verification plan a beginner can follow.
-Use EXACTLY this sub-structure (keep the headings and order):
-
-### VERIFICATION SUMMARY
-State the primary bug DevAgent believes is present.
-On two separate labeled lines write:
-CONFIRMED BY STATIC ANALYSIS: <one-sentence statement of what static inspection confirmed, or "Nothing confirmed" if nothing was>
-REQUIRES RUNTIME TESTING: <one-sentence statement of what still needs runtime testing>
-
-### TEST CASES
-Generate 2–4 concrete test cases derived ONLY from the supplied code and problem.
-Do not invent inputs that are not supported by the supplied code or problem.
-For each test case use this exact format:
-
-#### TEST CASE 01
-- Test name: <short descriptive name>
-- Input: <the concrete input, derived from the supplied code/problem>
-- Expected behavior: <what should happen if the proposed fix is correct>
-- What the test is checking: <the specific behavior being verified>
-- Status: REQUIRES RUNTIME TEST
-
-#### TEST CASE 02
-(same format, increment the number)
-
-### EXPECTED RESULT
-Explain in 2–4 sentences what should happen across the test cases if the proposed fix is correct.
-Do not claim any test was executed or passed.
-
-### VERIFICATION STATUS
-State exactly one of:
-- STATICALLY CONFIRMED
-- REQUIRES RUNTIME TEST
-- NOT VERIFIED
-
-Then on a new line write:
-Runtime verification: NOT AVAILABLE
-
-Never claim a test passed unless DevAgent actually performed that test.
-DevAgent does NOT execute user code on the server.
+Do NOT generate a Verification Lab, VERIFICATION SUMMARY, TEST CASES, EXPECTED RESULT, or any verification plan section. The server generates the Verification Lab deterministically after your response.
 
 QUALITY STANDARD:
 - Accurate
