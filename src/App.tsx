@@ -493,7 +493,7 @@ function App() {
                   }
                 >
                   {analyzing
-                    ? 'SCANNING SYSTEM...'
+                    ? 'DEVAGENT IS ANALYZING...'
                     : 'RUN ANALYSIS →'}
                 </button>
 

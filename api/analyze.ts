@@ -6,6 +6,93 @@ const ALLOWED_LANGUAGES = new Set([
   'Python',
 ]);
 
+type Finding = {
+  line: number;
+  snippet: string;
+  message: string;
+};
+
+const ASSIGNMENT_IN_CONDITION =
+  /(?<![=!<>+\-*/%&|^])=(?![=~>])/;
+
+const CONDITIONAL_CONTEXT =
+  /\.(find|filter|some|every|findIndex|findLast|findLastIndex)\s*\(|\bif\s*\(|\bwhile\s*\(|\bdo\s*\{|for\s*\(/;
+
+function staticVerify(
+  code: string,
+  language: string
+): Finding[] {
+  const findings: Finding[] = [];
+  const lines = code.split('\n');
+
+  for (let i = 0; i < lines.length; i++) {
+    const line = lines[i];
+    const lineNumber = i + 1;
+
+    if (
+      (language === 'JavaScript' ||
+        language === 'TypeScript') &&
+      CONDITIONAL_CONTEXT.test(line)
+    ) {
+      if (ASSIGNMENT_IN_CONDITION.test(line)) {
+        const match = line.match(
+          /(\w+(?:\.\w+)*)\s*=\s*(\w+)/
+        );
+
+        const target = match
+          ? `${match[1]} = ${match[2]}`
+          : line.trim();
+
+        findings.push({
+          line: lineNumber,
+          snippet: line.trim(),
+          message: `Assignment expression \`${target}\` used inside a condition/predicate. A single \`=\` assigns a value instead of comparing. Use \`===\` (or \`==\`) for comparison.`,
+        });
+      }
+    }
+
+    if (
+      language === 'Python' &&
+      /\bif\s+.*[^=!<>+\-*/%&|^]=[^=~]/.test(line)
+    ) {
+      findings.push({
+        line: lineNumber,
+        snippet: line.trim(),
+        message:
+          'Assignment used inside an `if` condition. Python does not support assignment in conditions; use `==` for comparison.',
+      });
+    }
+  }
+
+  return findings;
+}
+
+function buildVerificationBlock(
+  code: string,
+  language: string
+): string {
+  const findings = staticVerify(code, language);
+
+  let block = '\n\n---\n\n## STATIC VERIFICATION\n';
+
+  if (findings.length === 0) {
+    block +=
+      'No deterministic issues were confirmed by static inspection of the supplied source.\n';
+  } else {
+    block +=
+      'Confirmed by inspecting the supplied source (no code execution):\n\n';
+
+    for (const f of findings) {
+      block += `- Line ${f.line}: ${f.message}\n  \`${f.snippet}\`\n`;
+    }
+  }
+
+  block +=
+    '\n## RUNTIME VERIFICATION\nNOT AVAILABLE\nDevAgent does not execute user code. No runtime verification was performed. To confirm behavior, run the suggested tests yourself in a local environment.\n';
+
+  return block;
+}
+
 export default async function handler(req: any, res: any) {
   if (req.method !== 'POST') {
     return res.status(405).json({
@@ -125,7 +212,7 @@ Instead say things such as:
 "Based on the code provided..."
 "If no matching value is found..."
 
-RESPONSE FORMAT (use these exact headings):
+RESPONSE FORMAT (use these exact headings, in this exact order):
 
 ## 1. Problem
 Explain the main problem in 1–3 short sentences.
@@ -149,15 +236,7 @@ Provide the complete corrected version of the relevant code.
 Give 2–4 useful tests and their expected results.
 Clearly label these as tests the developer should run themselves.
 
-## 7. What You Learned
-Give 2–4 short lessons.
-
-## 8. Additional Issues
-Only mention meaningful additional issues supported by the code.
-If there are none, write:
-"No other significant issues identified."
-
-## 9. Verification Status
+## 7. Verification Status
 This section MUST clearly state one of:
 - NOT VERIFIED
 - VERIFIED
@@ -167,7 +246,15 @@ This section MUST clearly state one of:
 DevAgent does NOT execute code. Unless a real verification system ran the code, you MUST return:
 VERIFICATION STATUS: NOT VERIFIED
 
-Never claim execution occurred. Never claim a test passed.
+Never claim execution occurred. Never claim a test passed. Never say "I tested the code", "the code passed", "this fix is confirmed", or "I executed the code".
+
+## 8. What You Learned
+Give 2–4 short lessons.
+
+## 9. Additional Issues
+Only mention meaningful additional issues supported by the code.
+If there are none, write:
+"No other significant issues identified."
 
 QUALITY STANDARD:
 - Accurate
@@ -246,8 +333,13 @@ For simple bugs, aim for 300–500 words.
       });
     }
 
+    const verificationBlock = buildVerificationBlock(
+      code,
+      normalizedLanguage
+    );
+
     return res.status(200).json({
-      analysis,
+      analysis: analysis + verificationBlock,
     });
   } catch (error) {
     console.error('DevAgent API error:', error);
