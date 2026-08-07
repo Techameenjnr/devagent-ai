@@ -162,6 +162,83 @@ function buildLabBlock(findings: Finding[]): string {
   return block;
 }
 
+type GeminiResult = {
+  ok: boolean;
+  analysis: string;
+  finishReason: string;
+};
+
+function isTruncated(finishReason: string): boolean {
+  return (
+    finishReason === 'MAX_TOKENS' ||
+    finishReason === 'LENGTH' ||
+    finishReason === 'SAFETY' ||
+    finishReason === 'RECITATION'
+  );
+}
+
+async function callGemini(
+  prompt: string,
+  apiKey: string
+): Promise<GeminiResult> {
+  try {
+    const geminiResponse = await fetch(
+      'https://generativelanguage.googleapis.com/v1beta/models/gemini-2.5-flash:generateContent',
+      {
+        method: 'POST',
+        headers: {
+          'Content-Type': 'application/json',
+          'x-goog-api-key': apiKey,
+        },
+        body: JSON.stringify({
+          contents: [
+            {
+              role: 'user',
+              parts: [{ text: prompt }],
+            },
+          ],
+          generationConfig: {
+            temperature: 0.2,
+            maxOutputTokens: 4096,
+          },
+        }),
+      }
+    );
+
+    const rawText = await geminiResponse.text();
+
+    console.log('Gemini status:', geminiResponse.status);
+
+    if (!geminiResponse.ok) {
+      console.error('Gemini API error:', rawText);
+      return { ok: false, analysis: '', finishReason: '' };
+    }
+
+    let data: any;
+
+    try {
+      data = JSON.parse(rawText);
+    } catch {
+      console.error('Invalid Gemini JSON:', rawText);
+      return { ok: false, analysis: '', finishReason: '' };
+    }
+
+    const analysis = data?.candidates
+      ?.flatMap((candidate: any) => candidate?.content?.parts || [])
+      ?.map((part: any) => part?.text)
+      ?.filter(Boolean)
+      ?.join('\n') || '';
+
+    const finishReason: string =
+      data?.candidates?.[0]?.finishReason || '';
+
+    return { ok: true, analysis, finishReason };
+  } catch (error) {
+    console.error('Gemini fetch error:', error);
+    return { ok: false, analysis: '', finishReason: '' };
+  }
+}
+
 export default async function handler(req: any, res: any) {
   if (req.method !== 'POST') {
     return res.status(405).json({
@@ -344,69 +421,59 @@ QUALITY STANDARD:
 - Concise
 - Easy to scan
 
-Normally keep the response below 800 words.
-For simple bugs, aim for 400–600 words.
+LENGTH DISCIPLINE:
+- For simple bugs, target approximately 300–450 words total.
+- For complex bugs, keep the response below 700 words.
+- Do not repeat the same bug explanation multiple times.
+- Do not generate unnecessarily long examples.
+- Do not exceed the requested response length.
+- Always finish all required sections (1 through 9).
+- Prioritize completing the response over adding extra explanation.
+- Each section should be as concise as possible while remaining accurate.
 `;
 
-    const geminiResponse = await fetch(
-      'https://generativelanguage.googleapis.com/v1beta/models/gemini-2.5-flash:generateContent',
-      {
-        method: 'POST',
-        headers: {
-          'Content-Type': 'application/json',
-          'x-goog-api-key': apiKey,
-        },
-        body: JSON.stringify({
-          contents: [
-            {
-              role: 'user',
-              parts: [
-                {
-                  text: prompt,
-                },
-              ],
-            },
-          ],
-          generationConfig: {
-            temperature: 0.2,
-            maxOutputTokens: 4096,
-          },
-        }),
-      }
-    );
+    const first = await callGemini(prompt, apiKey);
 
-    const rawText = await geminiResponse.text();
-
-    console.log('Gemini status:', geminiResponse.status);
-
-    if (!geminiResponse.ok) {
-      console.error('Gemini API error:', rawText);
-
+    if (!first.ok) {
       return res.status(502).json({
         error: 'The analysis service is unavailable. Please try again later.',
       });
     }
 
-    let data: any;
+    let analysis = first.analysis;
+    let finishReason = first.finishReason;
 
-    try {
-      data = JSON.parse(rawText);
-    } catch {
-      console.error('Invalid Gemini JSON:', rawText);
+    if (isTruncated(finishReason)) {
+      console.warn(
+        'Gemini response truncated (finishReason=%s). Retrying with concise prompt.',
+        finishReason
+      );
+
+      const concisePrompt =
+        'IMPORTANT: Your previous response was truncated. Be extremely brief. Target 250–350 words total. Complete ALL 9 sections. Do not repeat explanations. Do not include long examples.\n\n' +
+        prompt;
+
+      const retry = await callGemini(concisePrompt, apiKey);
+
+      if (retry.ok) {
+        analysis = retry.analysis;
+        finishReason = retry.finishReason;
+      }
+    }
+
+    if (isTruncated(finishReason)) {
+      console.error(
+        'Gemini response still truncated after retry (finishReason=%s).',
+        finishReason
+      );
 
       return res.status(502).json({
-        error: 'The analysis service returned an invalid response.',
+        error: 'The analysis could not be completed. Please try again with a shorter code sample or problem description.',
       });
     }
 
-    const analysis = data?.candidates
-      ?.flatMap((candidate: any) => candidate?.content?.parts || [])
-      ?.map((part: any) => part?.text)
-      ?.filter(Boolean)
-      ?.join('\n');
-
     if (!analysis) {
-      console.error('No analysis returned:', data);
+      console.error('No analysis returned.');
 
       return res.status(502).json({
         error: 'The analysis service returned no analysis.',
